@@ -55,12 +55,15 @@ func NewBlockSyncer(
 	if cfg == nil || chain == nil || ap == nil || p2p == nil {
 		return nil, errors.New("cannot create BlockSync: missing param")
 	}
-
+	bufSize := cfg.BlockSync.BufferSize
+	if cfg.IsFullnode() {
+		bufSize <<= 3
+	}
 	buf := &blockBuffer{
 		blocks: make(map[uint64]*blockchain.Block),
 		bc:     chain,
 		ap:     ap,
-		size:   cfg.BlockSync.BufferSize,
+		size:   bufSize,
 	}
 	w := newSyncWorker(chain.ChainID(), cfg, p2p, buf)
 	bs := &blockSyncer{
@@ -72,7 +75,11 @@ func NewBlockSyncer(
 		p2p:            p2p,
 		worker:         w,
 	}
-	bs.chaser = routine.NewRecurringTask(bs.Chase, cfg.BlockSync.Interval*10)
+	chaserInterval := cfg.BlockSync.Interval * 10
+	if cfg.IsFullnode() {
+		chaserInterval = cfg.BlockSync.Interval
+	}
+	bs.chaser = routine.NewRecurringTask(bs.Chase, chaserInterval)
 	return bs, nil
 }
 
@@ -163,5 +170,5 @@ func (bs *blockSyncer) ProcessSyncRequest(sender string, sync *pb.BlockSync) err
 
 // Chase sets the block sync target height to be blockchain height + 1
 func (bs *blockSyncer) Chase() {
-	bs.worker.SetTargetHeight(bs.bc.TipHeight() + 1)
+	bs.worker.SetTargetHeight(bs.bc.TipHeight() + 128)
 }

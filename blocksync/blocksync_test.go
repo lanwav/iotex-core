@@ -472,7 +472,7 @@ func TestBlockSyncerChaser(t *testing.T) {
 		require.NoError(bs.Stop(ctx))
 	}()
 
-	require.NoError(testutil.WaitUntil(100*time.Millisecond, 10*time.Second, func() (bool, error) {
-		return bs.TargetHeight() == 1, nil
+	require.NoError(testutil.WaitUntil(100*time.Millisecond, cfg.BlockSync.Interval, func() (bool, error) {
+		return bs.TargetHeight() == 128, nil
 	}))
 }
